@@ -39,6 +39,7 @@ impl Game {
                 .collect()
         })
         .collect();
+        self.first_display = false;
     }
 }
 
@@ -66,12 +67,20 @@ fn main() {
         draw_grid(&mut buffer);
         
         draw_state(&mut game, &mut buffer);
+        
+
+        if window.is_key_down(Key::R) {
+            game.reset();
+        }
 
         // minifb lib schema
         window
             .update_with_buffer(&buffer, WIDTH, HEIGHT)
             .unwrap();
     }
+
+
+
 }
 
 fn draw_grid(buffer: &mut [u32]) {
@@ -95,13 +104,13 @@ fn draw_grid(buffer: &mut [u32]) {
     }
 }
 
-fn draw_cell(buffer: &mut [u32], cell_x: usize, cell_y: usize, color: u32) {
-    for y in 0..CELL_SIZE {
-        for x in 0..CELL_SIZE {
-            let px = cell_x * CELL_SIZE + x;
+fn draw_cell(buffer: &mut [u32], cell_y: usize, cell_x: usize, color: u32) {
+    for x in 0..CELL_SIZE {
+        for y in 0..CELL_SIZE {
             let py = cell_y * CELL_SIZE + y;
-            if px < WIDTH && py < HEIGHT {
-                buffer[py * WIDTH + px] = color;
+            let px = cell_x * CELL_SIZE + x;
+            if py < WIDTH && px < HEIGHT {
+                buffer[px * WIDTH + py] = color;
             }
         }
     }
@@ -120,13 +129,12 @@ fn draw_state(game:&mut Game,buffer: &mut [u32]) {
         };
 
         // inital state not drawn again
-        // temporarily removed - after initial draw - the else branch will always be run 
+        // after initial draw - the else branch will always be run 
         // to draw the next sequences that appear in the game
-        
         game.first_display = true;
     } else {
         // to replace with actual state update function 
-        game.reset();
+        //game.reset();
 
         for x in 0..32 {
             for y in 0..32 {
