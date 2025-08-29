@@ -1,5 +1,9 @@
+mod glyph;
 use minifb::{Key, Window, WindowOptions};
 use rand::Rng;
+use glyph::Glyphs;
+
+
 const WIDTH: usize = 640;
 const HEIGHT: usize = 640;
 const CELL_SIZE: usize = 20; // size of each cell in pixels
@@ -49,6 +53,7 @@ impl Game {
         })
         .collect();
         self.first_display = false;
+        self.generation = 0;
     }
 
     fn compute_next_state(&mut self) {
@@ -105,8 +110,10 @@ fn main() {
     // minifb lib schema - basic buffer and window setup
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
+    
+
     let mut window = Window::new(
-        "Game of Life Simulation - ESC to exit",
+        "Game of Life Simulation - ESC to exit - R to reset",
         WIDTH,
         HEIGHT,
         WindowOptions::default(),
@@ -119,17 +126,26 @@ fn main() {
 
     // game setup - init and create some randomized initial state
     let mut game = Game::new();
+    let mut speed = 1;
+    let glyphs = Glyphs::new();
 
     while window.is_open() && !window.is_key_down(Key::Escape) {
 
-        draw_grid(&mut buffer);
+        for _ in 0..speed {
+            draw_grid(&mut buffer);
         
-        draw_state(&mut game, &mut buffer);
-        
-
-        if window.is_key_down(Key::R) {
-            game.reset();
+            draw_state(&mut game, &mut buffer);
+            
+            draw_text(&mut buffer, &mut game, &glyphs);
         }
+        
+        // controls
+
+        if window.is_key_down(Key::Up) || window.is_key_down(Key::W) { speed+=1; }
+
+        if ( window.is_key_down(Key::Down)|| window.is_key_down(Key::S) ) && speed > 1 { speed-=1; }
+
+        if window.is_key_down(Key::R) { game.reset(); }
 
         // minifb lib schema
         window
@@ -206,6 +222,94 @@ fn draw_state(game:&mut Game,buffer: &mut [u32]) {
     }
 }
 
-//        draw_cell(&mut buffer, 10, 10, 0xFFFFFF); // white cell
+
+fn draw_text(buffer: &mut [u32], game: &mut Game, glyphs: &Glyphs) {
+    
+    let generation = game.generation;
+
+    let color = 0x98A1BC; 
+    // "generation:"
+    draw_letter(&glyphs.g, 10, color, buffer);
+    draw_letter(&glyphs.e, 20, color, buffer);
+    draw_letter(&glyphs.n, 30, color, buffer);
+    draw_letter(&glyphs.e, 40, color, buffer);
+    draw_letter(&glyphs.r, 50, color, buffer);
+    draw_letter(&glyphs.a,60, color, buffer);
+    draw_letter(&glyphs.t, 70, color, buffer);
+    draw_letter(&glyphs.i, 80, color, buffer);
+    draw_letter(&glyphs.o, 90, color, buffer);
+    draw_letter(&glyphs.n, 100, color, buffer);
+    draw_letter(&glyphs.double_colon, 110, color, buffer);
+
+
+    // "count" - pull apart and render each digit
+    let mut dx = 0;
+    generation.to_string().chars().for_each(|digit| {
+        match digit.to_digit(10) {
+            Some(9) => {draw_letter(&glyphs.d9, 120+ dx, color, buffer); dx+=10;},
+            Some(8) => {draw_letter(&glyphs.d8, 120+ dx, color, buffer); dx+=10;},
+            Some(7) => {draw_letter(&glyphs.d7, 120+ dx, color, buffer); dx+=10;},
+            Some(6) => {draw_letter(&glyphs.d6, 120+ dx, color, buffer); dx+=10;},
+            Some(5) => {draw_letter(&glyphs.d5, 120+ dx, color, buffer); dx+=10;},
+            Some(4) => {draw_letter(&glyphs.d4, 120+ dx, color, buffer); dx+=10;},
+            Some(3) => {draw_letter(&glyphs.d3, 120+ dx, color, buffer); dx+=10;},
+            Some(2) => {draw_letter(&glyphs.d2, 120+ dx, color, buffer); dx+=10;},
+            Some(1) => {draw_letter(&glyphs.d1, 120+ dx, color, buffer); dx+=10;},
+            Some(0) => {draw_letter(&glyphs.d0, 120+ dx, color, buffer); dx+=10;},
+            _ => {}
+        }
+    });
+
+    draw_instructions(buffer, &glyphs);
+}
+
+fn draw_letter(letter: &[[u8;5]; 5] , offset: usize, color: u32, buffer: &mut [u32] ) {
+
+    for (y, row) in letter.iter().enumerate() {
+        for (x, &pixel) in row.iter().enumerate() {
+            if pixel == 1 {
+                buffer[(y + 10) * WIDTH + (x + offset)] = color; // offset 10,10
+            }
+        }
+    }
+}
+
+// draw_cell(&mut buffer, 10, 10, 0xFFFFFF); // white cell
 // 0x555879 navy
 // 0x98A1BC lighter blue
+
+fn draw_instructions(buffer: &mut [u32], glyphs: &Glyphs) {
+
+    let color = 0x98A1BC; 
+    // Speed UP DOWN : W S
+    
+    fn draw_letter_instr(letter: &[[u8;5]; 5] , offset: usize, color: u32, buffer: &mut [u32] ) {
+
+        for (y, row) in letter.iter().enumerate() {
+            for (x, &pixel) in row.iter().enumerate() {
+                if pixel == 1 {
+                    buffer[(y + 20) * WIDTH + (x + offset)] = color; // offset 10,10
+                }
+            }
+        }
+    }
+
+    draw_letter_instr(&glyphs.s, 10, color, buffer);
+    draw_letter_instr(&glyphs.p, 20, color, buffer);
+    draw_letter_instr(&glyphs.e, 30, color, buffer);
+    draw_letter_instr(&glyphs.e, 40, color, buffer);
+    draw_letter_instr(&glyphs.d, 50, color, buffer);
+
+    draw_letter_instr(&glyphs.u, 70, color, buffer);
+    draw_letter_instr(&glyphs.p, 80, color, buffer);
+    draw_letter_instr(&glyphs.double_colon, 90, color, buffer);
+    draw_letter_instr(&glyphs.w, 100, color, buffer);
+
+    draw_letter_instr(&glyphs.d, 120, color, buffer);
+    draw_letter_instr(&glyphs.o, 130, color, buffer);
+    draw_letter_instr(&glyphs.w, 140, color, buffer);
+    draw_letter_instr(&glyphs.n, 150, color, buffer); 
+    draw_letter_instr(&glyphs.double_colon, 160, color, buffer);
+    draw_letter_instr(&glyphs.s, 170, color, buffer);
+
+}
